@@ -1,21 +1,19 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Run Chess Engine",
-      "type": "cppdbg",
-      "request": "launch",
-      "program": "${fileDirname}/${fileBasenameNoExtension}.exe",
-      "preLaunchTask": "Chess Engine",
-      "cwd": "${fileDirname}",
-      "MIMode": "gdb",
-      "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-      "environment": [
+    "version": "0.2.0",
+    "configurations": [
         {
-          "name": "PATH",
-          "value": "C:/msys64/ucrt64/bin;${env:PATH}"
+            "name": "Chess Engine",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/chess.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "preLaunchTask": "Chess Engine"
         }
-      ]
-    }
-  ]
+    ]
 }

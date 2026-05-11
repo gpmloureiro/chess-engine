@@ -1,8 +1,18 @@
 #include <SFML/Graphics.hpp>
+#include "board.h"
+#include "renderer.h"
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "Chess Engine");
+    sf::RenderWindow window(sf::VideoMode({640, 680}), "Chess Engine");
+    window.setFramerateLimit(60);
+
+    Board board;
+    board.init();
+
+    Renderer renderer(window);
+    if (!renderer.loadTextures())
+        return 1;
 
     while (window.isOpen())
     {
@@ -10,12 +20,14 @@ int main()
         {
             if (event->is<sf::Event::Closed>())
                 window.close();
+
+            if (const auto *click = event->getIf<sf::Event::MouseButtonPressed>())
+                if (click->button == sf::Mouse::Button::Left)
+                    renderer.handleClick(click->position.x, click->position.y, board);
         }
 
         window.clear();
-
-        // Draw here
-
+        renderer.draw(board);
         window.display();
     }
 }
