@@ -66,7 +66,7 @@ uint64_t MoveGen::knightMoves(int sq)
     moves |= (pos << 6) & NOT_H_COL & NOT_G_COL;
     moves |= (pos >> 17) & NOT_H_COL;
     moves |= (pos >> 15) & NOT_A_COL;
-    moves |= (pos >> 10) & NOT_H_COL & NOT_H_COL;
+    moves |= (pos >> 10) & NOT_H_COL & NOT_G_COL;
     moves |= (pos >> 6) & NOT_A_COL & NOT_B_COL;
 
     return moves;
