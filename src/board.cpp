@@ -30,41 +30,30 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
 
     if (possibleMoves & (1ULL << final))
     {
-        // Save initial state
-        uint64_t oldPieces[2][6];
-        for (int c = 0; c < 2; c++)
-            for (int p = 0; p < 6; p++)
-                oldPieces[c][p] = pieces[c][p];
-
-        // Simulate move
-        uint64_t moveMask = (1ULL << initial) | (1ULL << final);
-        pieces[color][pieceType] ^= moveMask;
-
         int enemy = !color;
         int capturedPiece = -1;
 
+        // Check if there's an enemy piece on the square
         if (occupancy[enemy] & (1ULL << final))
         {
-            for (int p = 0; p < 6; p++)
-            {
-                if (pieces[enemy][p] & (1ULL << final))
-                {
-                    capturedPiece = p;
-                    pieces[enemy][p] &= ~(1ULL << final);
-                    break;
-                }
-            }
+            capturedPiece = getPieceAt(final, color);
         }
+
+        // Apply move
+        pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
+        if (capturedPiece != -1)
+            pieces[enemy][capturedPiece] &= ~(1ULL << final);
 
         updateOccupancies();
 
-        // Verify if the move is legal
+        // Verify legality
         if (isInCheck(color))
         {
-            // Undo: Restore pieces and occupancy
-            for (int c = 0; c < 2; c++)
-                for (int p = 0; p < 6; p++)
-                    pieces[c][p] = oldPieces[c][p];
+            // Undo
+            pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
+            if (capturedPiece != -1)
+                pieces[enemy][capturedPiece] |= (1ULL << final);
+
             updateOccupancies();
             return false;
         }
