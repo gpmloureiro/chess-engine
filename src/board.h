@@ -17,8 +17,9 @@ enum Piece
     KING = 5
 };
 
-struct Board
+class Board
 {
+public:
     uint64_t pieces[2][6];
 
     uint64_t occupancy[2];
@@ -27,6 +28,14 @@ struct Board
     void init();
     bool makeMove(int initial, int final, int pieceType, int color);
     uint64_t getMoves(int sq, int pieceType, int color);
+    bool isSquareAttacked(int sq, int attackerColor);
+    bool isInCheck(int color);
+    bool isCheckMate(int color);
     void updateOccupancies();
     int getPieceAt(int sq, int color);
+
+private:
+    uint64_t handleKingMoves(uint64_t potentialMoves, int color);
+    bool isLegalMove(int initial, int final, int pieceType, int color);
+    bool hasLegalMoves(int color);
 };

@@ -1,4 +1,5 @@
 #include "game.h"
+#include <iostream>
 
 Game::Game(Board &board, Renderer &renderer)
     : board(board), renderer(renderer) {}
@@ -24,10 +25,17 @@ void Game::handleClick(int x, int y)
     {
         // Second click — try to move
         int pieceType = board.getPieceAt(selectedSquare, currentTurn);
+
+        // Check if move was valid
         if (board.makeMove(selectedSquare, sq, pieceType, currentTurn))
         {
             currentTurn ^= 1;
             renderer.setTurn(currentTurn);
+
+            if (board.isCheckMate(currentTurn))
+            {
+                std::cout << "Checkmate!";
+            }
         }
 
         selectedSquare = -1;

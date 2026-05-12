@@ -6,6 +6,24 @@ static constexpr uint64_t NOT_H_COL = 0x7F7F7F7F7F7F7F7FULL;
 static constexpr uint64_t NOT_B_COL = 0xFDFDFDFDFDFDFDFDULL;
 static constexpr uint64_t NOT_G_COL = 0xBFBFBFBFBFBFBFBFULL;
 
+uint64_t MoveGen::pawnAttacks(int sq, int color)
+{
+    uint64_t pos = 1ULL << sq;
+    uint64_t attacks = 0;
+
+    if (color == WHITE)
+    {
+        attacks |= (pos << 7) & NOT_H_COL;
+        attacks |= (pos << 9) & NOT_A_COL;
+    }
+    else
+    {
+        attacks |= (pos >> 7) & NOT_A_COL;
+        attacks |= (pos >> 9) & NOT_H_COL;
+    }
+    return attacks;
+}
+
 uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy)
 {
     uint64_t pos = 1ULL << sq;
@@ -19,8 +37,8 @@ uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy
         }
         moves |= (pos << 8) & ~combined;
 
-        moves |= (pos << 9) & enemy & NOT_H_COL;
-        moves |= (pos << 7) & enemy & NOT_A_COL;
+        moves |= (pos << 9) & enemy & NOT_A_COL;
+        moves |= (pos << 7) & enemy & NOT_H_COL;
     }
     else
     {
@@ -30,8 +48,8 @@ uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy
         }
         moves |= (pos >> 8) & ~combined;
 
-        moves |= (pos >> 9) & enemy & NOT_A_COL;
-        moves |= (pos >> 7) & enemy & NOT_H_COL;
+        moves |= (pos >> 9) & enemy & NOT_H_COL;
+        moves |= (pos >> 7) & enemy & NOT_A_COL;
     }
 
     return moves;

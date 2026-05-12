@@ -26,21 +26,49 @@ void Board::init()
 
 bool Board::makeMove(int initial, int final, int pieceType, int color)
 {
-    if (getMoves(initial, pieceType, color) & (1ULL << final))
-    { // Check if move is in possible moves
-        // Creates a 64-bit integer that contains two bits at 1, representing the initial and final position
-        uint64_t moveMask = (1ULL << initial) | (1ULL << final);
+    uint64_t possibleMoves = getMoves(initial, pieceType, color);
 
-        // Move position of the piece in its correspondent array
+    if (possibleMoves & (1ULL << final))
+    {
+        // Save initial state
+        uint64_t oldPieces[2][6];
+        for (int c = 0; c < 2; c++)
+            for (int p = 0; p < 6; p++)
+                oldPieces[c][p] = pieces[c][p];
+
+        // Simulate move
+        uint64_t moveMask = (1ULL << initial) | (1ULL << final);
         pieces[color][pieceType] ^= moveMask;
 
         int enemy = !color;
-        // Only enter the loop if the 'final' square is actually occupied by the enemy
+        int capturedPiece = -1;
+
         if (occupancy[enemy] & (1ULL << final))
+        {
             for (int p = 0; p < 6; p++)
-                pieces[enemy][p] &= ~(1ULL << final);
+            {
+                if (pieces[enemy][p] & (1ULL << final))
+                {
+                    capturedPiece = p;
+                    pieces[enemy][p] &= ~(1ULL << final);
+                    break;
+                }
+            }
+        }
 
         updateOccupancies();
+
+        // Verify if the move is legal
+        if (isInCheck(color))
+        {
+            // Undo: Restore pieces and occupancy
+            for (int c = 0; c < 2; c++)
+                for (int p = 0; p < 6; p++)
+                    pieces[c][p] = oldPieces[c][p];
+            updateOccupancies();
+            return false;
+        }
+
         return true;
     }
     return false;
@@ -61,10 +89,128 @@ uint64_t Board::getMoves(int sq, int pieceType, int color)
     case (QUEEN):
         return queenMoves(sq, combinedOccupancy) & ~occupancy[color];
     case (KING):
-        return kingMoves(sq) & ~occupancy[color];
+        return handleKingMoves(kingMoves(sq) & ~occupancy[color], color);
     default:
         return 0;
     }
+}
+
+uint64_t Board::handleKingMoves(uint64_t potentialMoves, int color)
+{
+    uint64_t safeMoves = 0;
+
+    while (potentialMoves)
+    {
+        // Get index of the next potential square
+        int targetSq = __builtin_ctzll(potentialMoves);
+
+        // Now isSquareAttacked is accessible because we are inside the Board scope
+        if (!isSquareAttacked(targetSq, !color))
+        {
+            safeMoves |= (1ULL << targetSq);
+        }
+
+        // Clear the bit we just processed
+        potentialMoves &= (potentialMoves - 1);
+    }
+
+    return safeMoves; // Return the bitboard of safe squares
+}
+
+// Uses the Superpiece method
+bool Board::isSquareAttacked(int sq, int enemyColor)
+{
+    if (MoveGen::pawnAttacks(sq, !enemyColor) & pieces[enemyColor][PAWN])
+        return true;
+
+    if (MoveGen::knightMoves(sq) & pieces[enemyColor][KNIGHT])
+        return true;
+
+    if (MoveGen::bishopMoves(sq, combinedOccupancy) &
+        (pieces[enemyColor][BISHOP] | pieces[enemyColor][QUEEN]))
+        return true;
+
+    if (MoveGen::rookMoves(sq, combinedOccupancy) &
+        (pieces[enemyColor][ROOK] | pieces[enemyColor][QUEEN]))
+        return true;
+
+    if (MoveGen::kingMoves(sq) & pieces[enemyColor][KING])
+        return true;
+
+    return false;
+}
+
+bool Board::isInCheck(int color)
+{
+    return isSquareAttacked(__builtin_ctzll(pieces[color][KING]), !color);
+}
+
+// Verifies if a position is legal by checking if it leeds to a check
+bool Board::isLegalMove(int initial, int final, int pieceType, int color)
+{
+    // Save initial state
+    uint64_t savedPieces[2][6];
+    for (int c = 0; c < 2; c++)
+        for (int p = 0; p < 6; p++)
+            savedPieces[c][p] = pieces[c][p];
+    uint64_t savedOcc[2] = {occupancy[WHITE], occupancy[BLACK]};
+    uint64_t savedCombined = combinedOccupancy;
+
+    // Simulate move
+    pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
+    pieces[!color][getPieceAt(final, !color)] &= ~(1ULL << final);
+    updateOccupancies();
+
+    bool result = !isInCheck(color);
+
+    // Restore initial state
+    for (int c = 0; c < 2; c++)
+        for (int p = 0; p < 6; p++)
+            pieces[c][p] = savedPieces[c][p];
+    occupancy[WHITE] = savedOcc[WHITE];
+    occupancy[BLACK] = savedOcc[BLACK];
+    combinedOccupancy = savedCombined;
+
+    return result;
+}
+
+// Checks if a given side has any legal moves
+bool Board::hasLegalMoves(int color)
+{
+    for (int p = 0; p < 6; p++)
+    {
+        uint64_t bitboard = pieces[color][p];
+
+        while (bitboard)
+        {
+            int sq = __builtin_ctzll(bitboard);
+            uint64_t moves = getMoves(sq, p, color);
+
+            while (moves)
+            {
+                int target = __builtin_ctzll(moves);
+
+                if (isLegalMove(sq, target, p, color))
+                {
+                    return true;
+                }
+                moves &= moves - 1;
+            }
+            bitboard &= bitboard - 1;
+        }
+    }
+
+    return false;
+}
+
+bool Board::isCheckMate(int color)
+{
+    if (!isInCheck(color))
+    {
+        return false;
+    }
+
+    return !hasLegalMoves(color);
 }
 
 void Board::updateOccupancies()
