@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include "board.h"
 #include "renderer.h"
+#include "game.h"
 
 int main()
 {
@@ -14,6 +15,8 @@ int main()
     if (!renderer.loadTextures())
         return 1;
 
+    Game game(board, renderer);
+
     while (window.isOpen())
     {
         while (const std::optional event = window.pollEvent())
@@ -23,7 +26,7 @@ int main()
 
             if (const auto *click = event->getIf<sf::Event::MouseButtonPressed>())
                 if (click->button == sf::Mouse::Button::Left)
-                    renderer.handleClick(click->position.x, click->position.y, board);
+                    game.handleClick(click->position.x, click->position.y);
         }
 
         window.clear();

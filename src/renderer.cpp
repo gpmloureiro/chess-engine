@@ -4,6 +4,7 @@
 const sf::Color Renderer::LIGHT = sf::Color(240, 217, 181);
 const sf::Color Renderer::DARK = sf::Color(181, 136, 99);
 const sf::Color Renderer::SELECTED = sf::Color(100, 180, 100, 180);
+const sf::Color Renderer::LEGAL = sf::Color(100, 100, 180, 150);
 
 static const char *PIECE_FILES[2][6] = {
     {"src/assets/wP.png", "src/assets/wN.png", "src/assets/wB.png",
@@ -40,45 +41,20 @@ int Renderer::getSquareFromMouse(int x, int y)
     return row * 8 + col;
 }
 
-// Returns which piece type is on sq for the given color, or -1
-int Renderer::getPieceAt(const Board &board, int sq, int color)
+void Renderer::setHighlight(int selected, uint64_t mask)
 {
-    for (int p = 0; p < 6; p++)
-        if (board.pieces[color][p] & (1ULL << sq))
-            return p;
-    return -1;
+    selectedSquare = selected;
+    legalMask = mask;
 }
 
-void Renderer::handleClick(int x, int y, Board &board)
+void Renderer::setTurn(int turn)
 {
-    int sq = getSquareFromMouse(x, y);
-    if (sq == -1)
-        return;
-
-    if (selectedSquare == -1)
-    {
-        // First click — select a piece if it belongs to current turn
-        if (getPieceAt(board, sq, currentTurn) != -1)
-            selectedSquare = sq;
-    }
-    else
-    {
-        // Second click — try to move
-        int pieceType = getPieceAt(board, selectedSquare, currentTurn);
-
-        if (pieceType != -1)
-        {
-            board.makeMove(selectedSquare, sq, pieceType, currentTurn);
-            board.updateOccupancies();
-            currentTurn ^= 1; // switch turn
-        }
-
-        selectedSquare = -1; // deselect regardless
-    }
+    currentTurn = turn;
 }
 
 void Renderer::draw(const Board &board)
 {
+    // Draw squares
     for (int row = 7; row >= 0; row--)
     {
         for (int col = 0; col < 8; col++)
@@ -95,9 +71,17 @@ void Renderer::draw(const Board &board)
                 square.setFillColor(SELECTED);
                 window.draw(square);
             }
+
+            // Highlight legal moves
+            if (legalMask & (1ULL << sq))
+            {
+                square.setFillColor(LEGAL);
+                window.draw(square);
+            }
         }
     }
 
+    // Draw pieces
     for (int c = 0; c < 2; c++)
     {
         for (int p = 0; p < 6; p++)
@@ -120,6 +104,7 @@ void Renderer::draw(const Board &board)
         }
     }
 
+    // Turn indicator
     if (currentTurn == WHITE)
     {
         turnText->setString("White's turn");

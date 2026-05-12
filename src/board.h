@@ -25,7 +25,8 @@ struct Board
     uint64_t combinedOccupancy;
 
     void init();
-    void makeMove(int from, int to, int pieceType, int color);
-    void isLegalMove(int from, int to, int pieceType, int color);
+    bool makeMove(int initial, int final, int pieceType, int color);
+    uint64_t getMoves(int sq, int pieceType, int color);
     void updateOccupancies();
+    int getPieceAt(int sq, int color);
 };

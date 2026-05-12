@@ -1,4 +1,8 @@
 #include "board.h"
+#include "movegen.h"
+#include <iostream>
+
+using namespace MoveGen;
 
 void Board::init()
 {
@@ -21,34 +25,46 @@ void Board::init()
     combinedOccupancy = 0xFFFF00000000FFFFULL;
 }
 
-void Board::makeMove(int from, int to, int pieceType, int color)
+bool Board::makeMove(int initial, int final, int pieceType, int color)
 {
+    if (getMoves(initial, pieceType, color) & (1ULL << final))
+    { // Check if move is in possible moves
+        // Creates a 64-bit integer that contains two bits at 1, representing the initial and final position
+        uint64_t moveMask = (1ULL << initial) | (1ULL << final);
 
-    // Creates a 64-bit integer that contains two bits at 1, representing the initial and final position
-    uint64_t moveMask = (1ULL << from) | (1ULL << to);
+        // Move position of the piece in its correspondent array
+        pieces[color][pieceType] ^= moveMask;
 
-    // Move position of the piece in its correspondent array
-    pieces[color][pieceType] ^= moveMask;
+        int enemy = !color;
+        // Only enter the loop if the 'final' square is actually occupied by the enemy
+        if (occupancy[enemy] & (1ULL << final))
+            for (int p = 0; p < 6; p++)
+                pieces[enemy][p] &= ~(1ULL << final);
 
-    int enemy = !color;
-    // Only enter the loop if the 'to' square is actually occupied by the enemy
-    if (occupancy[enemy] & (1ULL << to))
-        for (int p = 0; p < 6; p++)
-            pieces[enemy][p] &= ~(1ULL << to);
-
-    updateOccupancies();
+        updateOccupancies();
+        return true;
+    }
+    return false;
 }
 
-void Board::isLegalMove(int from, int to, int pieceType, int color)
+uint64_t Board::getMoves(int sq, int pieceType, int color)
 {
     switch (pieceType)
     {
-    case PAWN:
-        if ((to == (from << to)))
-            break;
-
+    case (PAWN):
+        return pawnMoves(sq, color, combinedOccupancy, occupancy[!color]);
+    // case (KNIGHT):
+    // return knightMoves(sq);
+    // case (BISHOP):
+    // return bishopMoves(sq, combinedOccupancy);
+    // case (ROOK):
+    // return rookMoves(sq, combinedOccupancy);
+    // case (QUEEN):
+    // return queenMoves(sq, combinedOccupancy);
+    // case (KING):
+    // return kingMoves(sq);
     default:
-        break;
+        return 0;
     }
 }
 
@@ -63,4 +79,13 @@ void Board::updateOccupancies()
     }
 
     combinedOccupancy = occupancy[WHITE] | occupancy[BLACK];
+    std::cout << "Atualizou!\n";
+}
+
+int Board::getPieceAt(int sq, int color)
+{
+    for (int p = 0; p < 6; p++)
+        if (pieces[color][p] & (1ULL << sq))
+            return p;
+    return -1;
 }
