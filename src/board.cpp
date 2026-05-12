@@ -1,6 +1,5 @@
 #include "board.h"
 #include "movegen.h"
-#include <iostream>
 
 using namespace MoveGen;
 
@@ -53,16 +52,16 @@ uint64_t Board::getMoves(int sq, int pieceType, int color)
     {
     case (PAWN):
         return pawnMoves(sq, color, combinedOccupancy, occupancy[!color]);
-    // case (KNIGHT):
-    // return knightMoves(sq);
-    // case (BISHOP):
-    // return bishopMoves(sq, combinedOccupancy);
-    // case (ROOK):
-    // return rookMoves(sq, combinedOccupancy);
-    // case (QUEEN):
-    // return queenMoves(sq, combinedOccupancy);
-    // case (KING):
-    // return kingMoves(sq);
+    case (KNIGHT):
+        return knightMoves(sq) & ~occupancy[color];
+    case (BISHOP):
+        return bishopMoves(sq, combinedOccupancy) & ~occupancy[color];
+    case (ROOK):
+        return rookMoves(sq, combinedOccupancy) & ~occupancy[color];
+    case (QUEEN):
+        return queenMoves(sq, combinedOccupancy) & ~occupancy[color];
+    case (KING):
+        return kingMoves(sq) & ~occupancy[color];
     default:
         return 0;
     }
@@ -79,7 +78,6 @@ void Board::updateOccupancies()
     }
 
     combinedOccupancy = occupancy[WHITE] | occupancy[BLACK];
-    std::cout << "Atualizou!\n";
 }
 
 int Board::getPieceAt(int sq, int color)
