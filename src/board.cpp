@@ -1,5 +1,6 @@
 #include "board.h"
 #include "movegen.h"
+#include <cstdlib>
 
 using namespace MoveGen;
 
@@ -22,6 +23,12 @@ void Board::init()
     occupancy[WHITE] = 0x000000000000FFFFULL;
     occupancy[BLACK] = 0xFFFF000000000000ULL;
     combinedOccupancy = 0xFFFF00000000FFFFULL;
+
+    // bit 0 = WHITE kingside
+    // bit 1 = WHITE queenside
+    // bit 2 = BLACK kingside
+    // bit 3 = BLACK queenside
+    castlingRights = 0b00001111;
 }
 
 bool Board::makeMove(int initial, int final, int pieceType, int color)
@@ -33,30 +40,70 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
         int enemy = !color;
         int capturedPiece = -1;
 
-        // Check if there's an enemy piece on the square
         if (occupancy[enemy] & (1ULL << final))
-        {
-            capturedPiece = getPieceAt(final, color);
-        }
+            capturedPiece = getPieceAt(final, enemy);
 
         // Apply move
         pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
         if (capturedPiece != -1)
             pieces[enemy][capturedPiece] &= ~(1ULL << final);
 
+        // Move rook if castling
+        bool isCastle = (pieceType == KING && std::abs(final - initial) == 2);
+        if (isCastle)
+        {
+            int rookFrom, rookTo;
+            if (final > initial) // kingside
+            {
+                rookFrom = (color == WHITE) ? 7 : 63;
+                rookTo = (color == WHITE) ? 5 : 61;
+            }
+            else // queenside
+            {
+                rookFrom = (color == WHITE) ? 0 : 56;
+                rookTo = (color == WHITE) ? 3 : 59;
+            }
+            pieces[color][ROOK] ^= (1ULL << rookFrom) | (1ULL << rookTo);
+        }
+
         updateOccupancies();
 
         // Verify legality
         if (isInCheck(color))
         {
-            // Undo
+            // Undo piece move
             pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
             if (capturedPiece != -1)
                 pieces[enemy][capturedPiece] |= (1ULL << final);
 
+            // Undo rook if castling
+            if (isCastle)
+            {
+                int rookFrom, rookTo;
+                if (final > initial)
+                {
+                    rookFrom = (color == WHITE) ? 7 : 63;
+                    rookTo = (color == WHITE) ? 5 : 61;
+                }
+                else
+                {
+                    rookFrom = (color == WHITE) ? 0 : 56;
+                    rookTo = (color == WHITE) ? 3 : 59;
+                }
+                pieces[color][ROOK] ^= (1ULL << rookFrom) | (1ULL << rookTo);
+            }
+
             updateOccupancies();
             return false;
         }
+
+        // Update castling rights
+        if (pieceType == KING)
+            castlingRights &= (color == WHITE) ? ~(WK_CASTLE | WQ_CASTLE) : ~(BK_CASTLE | BQ_CASTLE);
+        if (pieceType == ROOK)
+            updateCastlingRights(initial);
+        if (capturedPiece == ROOK)
+            updateCastlingRights(final);
 
         return true;
     }
@@ -103,7 +150,60 @@ uint64_t Board::handleKingMoves(uint64_t potentialMoves, int color)
         potentialMoves &= (potentialMoves - 1);
     }
 
-    return safeMoves; // Return the bitboard of safe squares
+    // Can't castle if in check
+    if (isInCheck(color))
+    {
+        return safeMoves;
+    }
+
+    int kingSq = (color == WHITE) ? 4 : 60;
+
+    // Handle castling king side
+    if (castlingRights & (color == WHITE ? WK_CASTLE : BK_CASTLE))
+    {
+        int passSq = kingSq + 1;
+        int landSq = kingSq + 2;
+
+        if (!(combinedOccupancy & ((1ULL << passSq) | (1ULL << landSq))) && !isSquareAttacked(passSq, !color) && !isSquareAttacked(landSq, !color))
+        {
+            safeMoves |= (1ULL << landSq);
+        }
+    }
+
+    // Handle castling queen side
+    if (castlingRights & (color == WHITE ? WQ_CASTLE : BQ_CASTLE))
+    {
+        int passSq = kingSq - 1;
+        int landSq = kingSq - 2;
+        int rookPass = kingSq - 3;
+
+        if (!(combinedOccupancy & ((1ULL << passSq) | (1ULL << landSq) | (1ULL << rookPass))) && !isSquareAttacked(passSq, !color) && !isSquareAttacked(landSq, !color))
+        {
+            safeMoves |= (1ULL << landSq);
+        }
+    }
+
+    return safeMoves;
+}
+
+// Checks if there is a need to update the castling rights and applies them if needed
+void Board::updateCastlingRights(int sq)
+{
+    switch (sq)
+    {
+    case 0:
+        castlingRights &= ~WQ_CASTLE;
+        break;
+    case 7:
+        castlingRights &= ~WK_CASTLE;
+        break;
+    case 56:
+        castlingRights &= ~BQ_CASTLE;
+        break;
+    case 63:
+        castlingRights &= ~BK_CASTLE;
+        break;
+    }
 }
 
 // Uses the Superpiece method

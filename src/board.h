@@ -22,9 +22,6 @@ class Board
 public:
     uint64_t pieces[2][6];
 
-    uint64_t occupancy[2];
-    uint64_t combinedOccupancy;
-
     void init();
     bool makeMove(int initial, int final, int pieceType, int color);
     uint64_t getMoves(int sq, int pieceType, int color);
@@ -35,7 +32,18 @@ public:
     int getPieceAt(int sq, int color);
 
 private:
+    static constexpr uint8_t WK_CASTLE = 0b00000001;
+    static constexpr uint8_t WQ_CASTLE = 0b00000010;
+    static constexpr uint8_t BK_CASTLE = 0b00000100;
+    static constexpr uint8_t BQ_CASTLE = 0b00001000;
+
+    uint64_t occupancy[2];
+    uint64_t combinedOccupancy;
+
+    uint8_t castlingRights;
+
     uint64_t handleKingMoves(uint64_t potentialMoves, int color);
+    void updateCastlingRights(int sq);
     bool isLegalMove(int initial, int final, int pieceType, int color);
     bool hasLegalMoves(int color);
 };
