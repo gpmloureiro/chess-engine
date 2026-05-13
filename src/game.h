@@ -1,6 +1,7 @@
 #pragma once
 #include "board.h"
 #include "renderer.h"
+#include "evaluation.h"
 
 class Game
 {
