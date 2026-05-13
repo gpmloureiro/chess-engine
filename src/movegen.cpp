@@ -24,10 +24,14 @@ uint64_t MoveGen::pawnAttacks(int sq, int color)
     return attacks;
 }
 
-uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy)
+uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy, int enPassantSq)
 {
     uint64_t pos = 1ULL << sq;
     uint64_t moves = 0;
+
+    uint64_t epMask = (enPassantSq != -1) ? (1ULL << enPassantSq) : 0;
+
+    uint64_t targets = enemy | epMask;
 
     if (color == WHITE)
     {
@@ -37,8 +41,8 @@ uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy
         }
         moves |= (pos << 8) & ~combined;
 
-        moves |= (pos << 9) & enemy & NOT_A_COL;
-        moves |= (pos << 7) & enemy & NOT_H_COL;
+        moves |= (pos << 9) & targets & NOT_A_COL;
+        moves |= (pos << 7) & targets & NOT_H_COL;
     }
     else
     {
@@ -48,8 +52,8 @@ uint64_t MoveGen::pawnMoves(int sq, int color, uint64_t combined, uint64_t enemy
         }
         moves |= (pos >> 8) & ~combined;
 
-        moves |= (pos >> 9) & enemy & NOT_H_COL;
-        moves |= (pos >> 7) & enemy & NOT_A_COL;
+        moves |= (pos >> 9) & targets & NOT_H_COL;
+        moves |= (pos >> 7) & targets & NOT_A_COL;
     }
 
     return moves;

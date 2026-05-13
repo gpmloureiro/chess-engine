@@ -39,6 +39,7 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
     {
         int enemy = !color;
         int capturedPiece = -1;
+        bool isEP = isEnPassant(final, pieceType);
 
         if (occupancy[enemy] & (1ULL << final))
             capturedPiece = getPieceAt(final, enemy);
@@ -47,6 +48,9 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
         pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
         if (capturedPiece != -1)
             pieces[enemy][capturedPiece] &= ~(1ULL << final);
+
+        if (isEP)
+            updateEnPassant(final, color);
 
         // Move rook if castling
         bool isCastle = (pieceType == KING && std::abs(final - initial) == 2);
@@ -75,6 +79,10 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
             pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
             if (capturedPiece != -1)
                 pieces[enemy][capturedPiece] |= (1ULL << final);
+
+            // Undo EnPassant
+            if (isEP)
+                pieces[!color][PAWN] |= 1ULL << ((color == WHITE) ? final - 8 : final + 8);
 
             // Undo rook if castling
             if (isCastle)
@@ -105,6 +113,9 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
         if (capturedPiece == ROOK)
             updateCastlingRights(final);
 
+        // Update en passant logic
+        enPassantSq = (pieceType == PAWN && (std::abs(initial - final) == 16)) ? (initial + final) / 2 : -1;
+
         return true;
     }
     return false;
@@ -115,7 +126,7 @@ uint64_t Board::getMoves(int sq, int pieceType, int color)
     switch (pieceType)
     {
     case (PAWN):
-        return pawnMoves(sq, color, combinedOccupancy, occupancy[!color]);
+        return pawnMoves(sq, color, combinedOccupancy, occupancy[!color], enPassantSq);
     case (KNIGHT):
         return knightMoves(sq) & ~occupancy[color];
     case (BISHOP):
@@ -186,6 +197,11 @@ uint64_t Board::handleKingMoves(uint64_t potentialMoves, int color)
     return safeMoves;
 }
 
+void Board::updateEnPassant(int sq, int color)
+{
+    pieces[!color][PAWN] &= ~(1ULL << ((color == WHITE) ? sq - 8 : sq + 8));
+}
+
 // Checks if there is a need to update the castling rights and applies them if needed
 void Board::updateCastlingRights(int sq)
 {
@@ -229,6 +245,7 @@ bool Board::isSquareAttacked(int sq, int enemyColor)
     return false;
 }
 
+// Checks if a side is in check
 bool Board::isInCheck(int color)
 {
     return isSquareAttacked(__builtin_ctzll(pieces[color][KING]), !color);
@@ -237,7 +254,6 @@ bool Board::isInCheck(int color)
 // Verifies if a position is legal by checking if it leeds to a check
 bool Board::isLegalMove(int initial, int final, int pieceType, int color)
 {
-    // Save initial state
     uint64_t savedPieces[2][6];
     for (int c = 0; c < 2; c++)
         for (int p = 0; p < 6; p++)
@@ -245,14 +261,21 @@ bool Board::isLegalMove(int initial, int final, int pieceType, int color)
     uint64_t savedOcc[2] = {occupancy[WHITE], occupancy[BLACK]};
     uint64_t savedCombined = combinedOccupancy;
 
-    // Simulate move
+    int enemy = !color;
     pieces[color][pieceType] ^= (1ULL << initial) | (1ULL << final);
-    pieces[!color][getPieceAt(final, !color)] &= ~(1ULL << final);
-    updateOccupancies();
 
+    if (isEnPassant(final, pieceType))
+        updateEnPassant(final, color);
+    else
+    {
+        int captured = getPieceAt(final, enemy);
+        if (captured != -1)
+            pieces[enemy][captured] &= ~(1ULL << final);
+    }
+
+    updateOccupancies();
     bool result = !isInCheck(color);
 
-    // Restore initial state
     for (int c = 0; c < 2; c++)
         for (int p = 0; p < 6; p++)
             pieces[c][p] = savedPieces[c][p];
@@ -261,6 +284,11 @@ bool Board::isLegalMove(int initial, int final, int pieceType, int color)
     combinedOccupancy = savedCombined;
 
     return result;
+}
+
+bool Board::isEnPassant(int sq, int pieceType)
+{
+    return pieceType == PAWN && sq == enPassantSq;
 }
 
 // Checks if a given side has any legal moves
@@ -300,6 +328,11 @@ bool Board::isCheckMate(int color)
     }
 
     return !hasLegalMoves(color);
+}
+
+bool Board::isStaleMate(int color)
+{
+    return !isInCheck(color) && !hasLegalMoves(color);
 }
 
 void Board::updateOccupancies()

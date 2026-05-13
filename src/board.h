@@ -41,9 +41,12 @@ private:
     uint64_t combinedOccupancy;
 
     uint8_t castlingRights;
+    int enPassantSq;
 
     uint64_t handleKingMoves(uint64_t potentialMoves, int color);
+    void updateEnPassant(int sq, int color);
     void updateCastlingRights(int sq);
     bool isLegalMove(int initial, int final, int pieceType, int color);
+    bool isEnPassant(int sq, int pieceType);
     bool hasLegalMoves(int color);
 };
