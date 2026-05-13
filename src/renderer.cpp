@@ -6,6 +6,13 @@ const sf::Color Renderer::DARK = sf::Color(181, 136, 99);
 const sf::Color Renderer::SELECTED = sf::Color(100, 180, 100, 180);
 const sf::Color Renderer::LEGAL = sf::Color(100, 100, 180, 150);
 
+static const sf::Color PROMO_BG = sf::Color(235, 235, 210, 245);
+static const sf::Color PROMO_BORDER = sf::Color(80, 80, 80, 220);
+
+// The four pieces shown in the promotion panel (top-to-bottom for WHITE,
+// bottom-to-top for BLACK so the panel always opens toward the centre).
+static const int PROMO_PIECES[4] = {QUEEN, ROOK, BISHOP, KNIGHT};
+
 static const char *PIECE_FILES[2][6] = {
     {"src/assets/wP.png", "src/assets/wN.png", "src/assets/wB.png",
      "src/assets/wR.png", "src/assets/wQ.png", "src/assets/wK.png"},
@@ -52,6 +59,83 @@ void Renderer::setTurn(int turn)
     currentTurn = turn;
 }
 
+void Renderer::setPromotionPending(bool pending, int color, int sq)
+{
+    promotionPending = pending;
+    promotionColor = color;
+    promotionSq = sq;
+}
+
+// Returns the piece type the player clicked on, or -1 if the click missed.
+// The panel always has 4 tiles stacked in the promotion column:
+//   WHITE: rows 7,6,5,4 on screen (top of board downward)
+//   BLACK: rows 0,1,2,3 on screen (bottom of board upward)
+int Renderer::getPromotionChoice(int x, int y, int color)
+{
+    if (!promotionPending)
+        return -1;
+
+    int col = x / TILE;
+    if (col != promotionSq % 8)
+        return -1; // click is outside the promotion column
+
+    int screenRow = y / TILE; // 0 = top of window
+    int boardRow = 7 - screenRow;
+
+    if (color == WHITE)
+    {
+        // Panel occupies board rows 7,6,5,4  →  screen rows 0,1,2,3
+        int idx = 7 - boardRow; // 0..3
+        if (idx < 0 || idx > 3)
+            return -1;
+        return PROMO_PIECES[idx];
+    }
+    else
+    {
+        // Panel occupies board rows 0,1,2,3  →  screen rows 7,6,5,4
+        int idx = boardRow; // 0..3
+        if (idx < 0 || idx > 3)
+            return -1;
+        return PROMO_PIECES[idx];
+    }
+}
+
+// Draw the 4-piece promotion selector on top of the board
+void Renderer::drawPromotionPanel()
+{
+    int col = promotionSq % 8;
+
+    // Translucent overlay over the entire board to focus attention
+    sf::RectangleShape overlay({(float)(TILE * 8), (float)(TILE * 8)});
+    overlay.setFillColor(sf::Color(0, 0, 0, 100));
+    overlay.setPosition({0.f, 0.f});
+    window.draw(overlay);
+
+    for (int i = 0; i < 4; i++)
+    {
+        // Which board row does this slot occupy?
+        int boardRow = (promotionColor == WHITE) ? (7 - i) : i;
+        float px = (float)(col * TILE);
+        float py = (float)((7 - boardRow) * TILE);
+
+        // Background tile
+        sf::RectangleShape bg({(float)TILE, (float)TILE});
+        bg.setFillColor(PROMO_BG);
+        bg.setOutlineColor(PROMO_BORDER);
+        bg.setOutlineThickness(2.f);
+        bg.setPosition({px, py});
+        window.draw(bg);
+
+        // Piece sprite
+        int piece = PROMO_PIECES[i];
+        sf::Sprite sprite(pieceTextures[promotionColor][piece]);
+        auto sz = pieceTextures[promotionColor][piece].getSize();
+        sprite.setScale({(float)TILE / sz.x, (float)TILE / sz.y});
+        sprite.setPosition({px, py});
+        window.draw(sprite);
+    }
+}
+
 void Renderer::draw(const Board &board)
 {
     // Draw squares
@@ -65,14 +149,11 @@ void Renderer::draw(const Board &board)
             square.setPosition({(float)(col * TILE), (float)((7 - row) * TILE)});
             window.draw(square);
 
-            // Highlight selected square
             if (sq == selectedSquare)
             {
                 square.setFillColor(SELECTED);
                 window.draw(square);
             }
-
-            // Highlight legal moves
             if (legalMask & (1ULL << sq))
             {
                 square.setFillColor(LEGAL);
@@ -103,6 +184,10 @@ void Renderer::draw(const Board &board)
             }
         }
     }
+
+    // Promotion panel drawn on top of everything else
+    if (promotionPending)
+        drawPromotionPanel();
 
     // Turn indicator
     if (currentTurn == WHITE)

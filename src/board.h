@@ -21,6 +21,9 @@ class Board
 {
 public:
     uint64_t pieces[2][6];
+    int promotionSq = -1;
+    int promotionColor = -1;
+    bool pendingPromotion = false;
 
     void init();
     bool makeMove(int initial, int final, int pieceType, int color);
@@ -31,6 +34,7 @@ public:
     bool isStaleMate(int color);
     void updateOccupancies();
     int getPieceAt(int sq, int color);
+    void applyPromotion(int pieceType);
 
 private:
     static constexpr uint8_t WK_CASTLE = 0b00000001;

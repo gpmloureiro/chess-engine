@@ -12,7 +12,10 @@ private:
     Board &board;
     Renderer &renderer;
 
+    bool awaitingPromotion = false;
     int selectedSquare = -1;
     uint64_t legalMask = 0;
     int currentTurn = WHITE;
+
+    void finishTurn();
 };

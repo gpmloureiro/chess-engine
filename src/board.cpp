@@ -105,6 +105,21 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
             return false;
         }
 
+        // Pawn promotion detection
+        bool isPromotion = (pieceType == PAWN) &&
+                           ((color == WHITE && (final / 8) == 7) ||
+                            (color == BLACK && (final / 8) == 0));
+        if (isPromotion)
+        {
+            pendingPromotion = true;
+            promotionSq = final;
+            promotionColor = color;
+            // Remove the pawn from the board for now
+            pieces[color][PAWN] &= ~(1ULL << final);
+            updateOccupancies();
+            return true;
+        }
+
         // Update castling rights
         if (pieceType == KING)
             castlingRights &= (color == WHITE) ? ~(WK_CASTLE | WQ_CASTLE) : ~(BK_CASTLE | BQ_CASTLE);
@@ -220,6 +235,15 @@ void Board::updateCastlingRights(int sq)
         castlingRights &= ~BK_CASTLE;
         break;
     }
+}
+
+void Board::applyPromotion(int pieceType)
+{
+    pieces[promotionColor][pieceType] |= (1ULL << promotionSq);
+    updateOccupancies();
+    pendingPromotion = false;
+    promotionSq = -1;
+    promotionColor = -1;
 }
 
 // Uses the Superpiece method

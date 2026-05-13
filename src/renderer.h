@@ -12,6 +12,8 @@ public:
     int getSquareFromMouse(int x, int y);
     void setHighlight(int selected, uint64_t legalMask);
     void setTurn(int turn);
+    void setPromotionPending(bool pending, int color, int sq);
+    int getPromotionChoice(int x, int y, int color);
 
 private:
     sf::RenderWindow &window;
@@ -24,9 +26,15 @@ private:
     uint64_t legalMask = 0;
     int currentTurn = WHITE;
 
+    bool promotionPending = false;
+    int promotionColor = -1;
+    int promotionSq = -1;
+
     static constexpr int TILE = 80;
     static const sf::Color LIGHT;
     static const sf::Color DARK;
     static const sf::Color SELECTED;
     static const sf::Color LEGAL;
+
+    void drawPromotionPanel();
 };
