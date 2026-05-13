@@ -36,6 +36,11 @@ void Game::handleClick(int x, int y)
             {
                 std::cout << "Checkmate!";
             }
+
+            if (board.isStaleMate(currentTurn))
+            {
+                std::cout << "Stalemate!";
+            }
         }
 
         selectedSquare = -1;

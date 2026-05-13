@@ -28,6 +28,7 @@ public:
     bool isSquareAttacked(int sq, int attackerColor);
     bool isInCheck(int color);
     bool isCheckMate(int color);
+    bool isStaleMate(int color);
     void updateOccupancies();
     int getPieceAt(int sq, int color);
 
