@@ -10,4 +10,3 @@ struct BestMove
 };
 
 BestMove findBestMove(Board &board, int depth, int color);
-int search(Board &board, int depth, int color);

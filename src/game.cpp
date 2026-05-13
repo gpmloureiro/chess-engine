@@ -22,8 +22,8 @@ void Game::finishTurn()
     {
         std::cout << "AI is thinking...\n";
 
-        // Call recursive with depth 4
-        BestMove aiMove = findBestMove(board, 4, BLACK);
+        // Call recursive with depth 5 (~ 1300 Elo)
+        BestMove aiMove = findBestMove(board, 5, BLACK);
 
         if (aiMove.initial != -1)
         {
