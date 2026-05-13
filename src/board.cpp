@@ -136,6 +136,43 @@ bool Board::makeMove(int initial, int final, int pieceType, int color)
     return false;
 }
 
+void Board::unmakeMove(int from, int to, int pieceType, int color,
+                       int capturedPiece, int prevEnPassantSq,
+                       uint8_t prevCastle, bool wasEP, bool wasCastle)
+{
+    // Move the piece back
+    pieces[color][pieceType] ^= (1ULL << from) | (1ULL << to);
+
+    // Restore captured piece
+    if (capturedPiece != -1)
+        pieces[!color][capturedPiece] |= (1ULL << to);
+
+    // Restore en passant captured pawn
+    if (wasEP)
+        pieces[!color][PAWN] |= 1ULL << ((color == WHITE) ? to - 8 : to + 8);
+
+    // Restore rook if castling
+    if (wasCastle)
+    {
+        int rookFrom, rookTo;
+        if (to > from)
+        {
+            rookFrom = (color == WHITE) ? 7 : 63;
+            rookTo = (color == WHITE) ? 5 : 61;
+        }
+        else
+        {
+            rookFrom = (color == WHITE) ? 0 : 56;
+            rookTo = (color == WHITE) ? 3 : 59;
+        }
+        pieces[color][ROOK] ^= (1ULL << rookFrom) | (1ULL << rookTo);
+    }
+
+    enPassantSq = prevEnPassantSq;
+    castlingRights = prevCastle;
+    updateOccupancies();
+}
+
 uint64_t Board::getMoves(int sq, int pieceType, int color)
 {
     switch (pieceType)
@@ -240,8 +277,8 @@ void Board::updateCastlingRights(int sq)
 void Board::applyPromotion(int pieceType)
 {
     pieces[promotionColor][pieceType] |= (1ULL << promotionSq);
-    updateOccupancies();
     pendingPromotion = false;
+    updateOccupancies();
     promotionSq = -1;
     promotionColor = -1;
 }

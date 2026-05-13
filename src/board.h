@@ -21,15 +21,23 @@ class Board
 {
 public:
     uint64_t pieces[2][6];
+
+    uint8_t castlingRights;
+    int enPassantSq;
+
     int promotionSq = -1;
     int promotionColor = -1;
     bool pendingPromotion = false;
 
     void init();
     bool makeMove(int initial, int final, int pieceType, int color);
+    void unmakeMove(int from, int to, int pieceType, int color,
+                    int capturedPiece, int prevEnPassantSq,
+                    uint8_t prevCastle, bool wasEP, bool wasCastle);
     uint64_t getMoves(int sq, int pieceType, int color);
     bool isSquareAttacked(int sq, int attackerColor);
     bool isInCheck(int color);
+    bool isEnPassant(int sq, int pieceType);
     bool isCheckMate(int color);
     bool isStaleMate(int color);
     void updateOccupancies();
@@ -45,13 +53,9 @@ private:
     uint64_t occupancy[2];
     uint64_t combinedOccupancy;
 
-    uint8_t castlingRights;
-    int enPassantSq;
-
     uint64_t handleKingMoves(uint64_t potentialMoves, int color);
     void updateEnPassant(int sq, int color);
     void updateCastlingRights(int sq);
     bool isLegalMove(int initial, int final, int pieceType, int color);
-    bool isEnPassant(int sq, int pieceType);
     bool hasLegalMoves(int color);
 };

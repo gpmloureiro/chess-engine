@@ -1,5 +1,6 @@
 #include "game.h"
 #include "evaluation.h"
+#include "engine.h"
 #include <iostream>
 
 Game::Game(Board &board, Renderer &renderer)
@@ -10,12 +11,31 @@ void Game::finishTurn()
     currentTurn ^= 1;
     renderer.setTurn(currentTurn);
 
+    // Check for game over
     if (board.isCheckMate(currentTurn))
-        std::cout << (currentTurn == WHITE ? "Black" : "White") << " wins by checkmate!\n";
-    else if (board.isStaleMate(currentTurn))
-        std::cout << "Stalemate — draw!\n";
-    else
-        std::cout << "Evaluation: " << evaluate(board.pieces) << "\n";
+    {
+        std::cout << (currentTurn == WHITE ? "Black" : "White") << " wins!\n";
+        return;
+    }
+
+    if (currentTurn == BLACK)
+    {
+        std::cout << "AI is thinking...\n";
+
+        // Call recursive with depth 4
+        BestMove aiMove = findBestMove(board, 4, BLACK);
+
+        if (aiMove.initial != -1)
+        {
+            board.makeMove(aiMove.initial, aiMove.final, aiMove.pieceType, BLACK);
+            if (board.pendingPromotion)
+                board.applyPromotion(QUEEN);
+
+            finishTurn();
+        }
+
+        std::cout << "Evaluation: " << evaluate(board.pieces) << std::endl;
+    }
 }
 
 void Game::handleClick(int x, int y)
@@ -56,6 +76,10 @@ void Game::handleClick(int x, int y)
             if (board.pendingPromotion)
             {
                 awaitingPromotion = true;
+                selectedSquare = -1;
+                legalMask = 0;
+
+                renderer.setHighlight(-1, 0);
                 renderer.setPromotionPending(true,
                                              board.promotionColor,
                                              board.promotionSq);
