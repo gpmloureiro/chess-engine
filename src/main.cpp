@@ -2,10 +2,11 @@
 #include "board.h"
 #include "renderer.h"
 #include "game.h"
+#include "evaluation.h"
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode({640, 680}), "Chess Engine");
+    sf::RenderWindow window(sf::VideoMode({900, 720}), "Chess Engine");
     window.setFramerateLimit(60);
 
     Board board;
@@ -29,8 +30,8 @@ int main()
                     game.handleClick(click->position.x, click->position.y);
         }
 
-        window.clear();
-        renderer.draw(board);
+        window.clear(sf::Color(100, 100, 200));
+        renderer.draw(board, evaluate(board.pieces));
         window.display();
     }
 }
